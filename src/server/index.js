@@ -10,27 +10,32 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(cors());
 
+// Dodaj middleware do serwowania statycznych plików
+app.use('/scores', express.static(path.join(__dirname, '../../public/scores')));
+
 app.get('/api/scores', async (req, res) => {
   try {
     const scoresDir = path.join(__dirname, '../../public/scores');
-    console.log('Ścieżka do folderu scores:', scoresDir);
-    
+    console.log('Sprawdzam folder:', scoresDir); // debugging
+
     const files = await fs.readdir(scoresDir);
-    console.log('Znalezione pliki:', files);
-    
+    console.log('Znalezione pliki:', files); // debugging
+
     const scores = files
       .filter(file => file.endsWith('.pdf'))
       .map(file => ({
         name: file,
-        path: `/scores/${file}`
+        path: `http://localhost:3002/scores/${file}` // Pełny URL
       }));
-    
-    console.log('Wysyłane dane:', scores);
-    
+
+    console.log('Wysyłam dane:', scores); // debugging
     res.json(scores);
   } catch (error) {
     console.error('Błąd podczas odczytywania folderu scores:', error);
-    res.status(500).json({ error: 'Nie udało się pobrać listy utworów' });
+    res.status(500).json({ 
+      error: 'Nie udało się pobrać listy utworów',
+      details: error.message 
+    });
   }
 });
 

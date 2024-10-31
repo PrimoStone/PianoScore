@@ -4,19 +4,37 @@ function ScoreSelector() {
   const [scores, setScores] = useState([]);
   const [selectedScore, setSelectedScore] = useState('');
   const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchScores = async () => {
       try {
-        const response = await fetch('http://localhost:3002/api/scores');
+        setIsLoading(true);
+        console.log('Rozpoczynam pobieranie plików...'); // debugging
+        
+        const response = await fetch('http://localhost:3002/api/scores', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        console.log('Odpowiedź z serwera:', response); // debugging
+
         if (!response.ok) {
-          throw new Error('Problem z pobraniem plików');
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
+
         const data = await response.json();
+        console.log('Otrzymane dane:', data); // debugging
+        
         setScores(data);
       } catch (err) {
+        console.error('Szczegóły błędu:', err);
         setError(err.message);
-        console.error('Błąd:', err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -26,6 +44,19 @@ function ScoreSelector() {
   const handleScoreChange = (event) => {
     setSelectedScore(event.target.value);
   };
+
+  if (isLoading) {
+    return <div>Ładowanie listy utworów...</div>;
+  }
+
+  if (error) {
+    return (
+      <div>
+        <p>Błąd podczas ładowania listy utworów: {error}</p>
+        <p>Sprawdź czy serwer jest uruchomiony na porcie 3002</p>
+      </div>
+    );
+  }
 
   return (
     <div className="score-selector">
@@ -43,12 +74,11 @@ function ScoreSelector() {
       </select>
       
       {selectedScore && (
-        <div style={{ marginTop: '20px', width: '100%', height: '800px' }}>
+        <div style={{ marginTop: '20px' }}>
+          <p>Wybrany utwór: {selectedScore}</p>
           <iframe
             src={selectedScore}
-            width="100%"
-            height="100%"
-            style={{ border: 'none' }}
+            style={{ width: '100%', height: '800px', border: 'none' }}
             title="PDF Viewer"
           />
         </div>
@@ -57,4 +87,4 @@ function ScoreSelector() {
   );
 }
 
-export default ScoreSelector; 
+export default ScoreSelector;
