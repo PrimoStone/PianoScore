@@ -12,60 +12,63 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Logging middleware
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
-  next();
-});
+// Dodaj obsługę plików statycznych z folderu public
+app.use(express.static('public'));
 
-app.get('/api/scores', async (req, res) => {
-  console.log('Próba pobrania listy plików...');
+app.get('/api/scores', (req, res) => {
   try {
-    // Sprawdź ścieżkę do folderu scores
-    const scoresPath = join(__dirname, 'public', 'scores');
+    // Zmiana ścieżki na public/scores
+    const scoresPath = join(process.cwd(), 'public', 'scores');
     console.log('Ścieżka do folderu scores:', scoresPath);
-
-    // Sprawdź czy folder istnieje
+    
     if (!fs.existsSync(scoresPath)) {
       console.log('Folder scores nie istnieje!');
-      // Zwróć pustą listę zamiast błędu
       return res.json({ files: [] });
     }
-
-    // Pobierz listę plików
+    
     const files = fs.readdirSync(scoresPath);
     console.log('Znalezione pliki:', files);
-
-    // Filtruj pliki PDF
+    
     const pdfFiles = files.filter(file => file.toLowerCase().endsWith('.pdf'));
-    console.log('Pliki PDF:', pdfFiles);
-
-    return res.json({ files: pdfFiles });
+    res.json({ files: pdfFiles });
   } catch (error) {
-    console.error('Szczegóły błędu:', error);
-    // Zwróć bardziej szczegółową informację o błędzie
-    return res.status(500).json({ 
-      error: 'Nie udało się pobrać listy plików',
-      details: error.message,
-      files: []
-    });
+    console.error('Błąd:', error);
+    res.status(500).json({ error: 'Nie udało się pobrać listy plików' });
+  }
+});
+
+app.get('/api/scores/:filename', (req, res) => {
+  try {
+    const filename = req.params.filename;
+    // Zmiana ścieżki na public/scores
+    const filePath = join(process.cwd(), 'public', 'scores', filename);
+    console.log('Próba pobrania pliku:', filePath);
+    
+    if (!fs.existsSync(filePath)) {
+      console.log('Plik nie istnieje:', filePath);
+      return res.status(404).json({ error: 'Plik nie został znaleziony' });
+    }
+    
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('Błąd:', error);
+    res.status(500).json({ error: 'Nie udało się pobrać pliku' });
   }
 });
 
 const PORT = 3002;
-
 app.listen(PORT, () => {
   console.log(`Serwer nasłuchuje na porcie ${PORT}`);
   
   // Sprawdź folder scores przy starcie
-  const scoresPath = join(__dirname, 'public', 'scores');
-  console.log('Ścieżka do folderu scores:', scoresPath);
+  const scoresPath = join(process.cwd(), 'public', 'scores');
+  console.log('\nSprawdzanie folderu scores:');
+  console.log('Ścieżka:', scoresPath);
   
   if (fs.existsSync(scoresPath)) {
     const files = fs.readdirSync(scoresPath);
     console.log('Pliki w folderze scores:', files);
   } else {
     console.log('UWAGA: Folder scores nie istnieje!');
-    console.log('Utwórz folder:', scoresPath);
   }
 });
