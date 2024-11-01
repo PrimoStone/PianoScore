@@ -13,6 +13,11 @@ function ScoreSelector({ onViewChange }) {
   const [isFileView, setIsFileView] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const fullscreenRef = useRef(null);
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
+  const isDragging = useRef(false);
+  const startX = useRef(null);
+  const startY = useRef(null);
 
   const handlePrevPage = () => {
     setCurrentPage(prev => Math.max(1, prev - 1));
@@ -174,6 +179,83 @@ function ScoreSelector({ onViewChange }) {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
+  // Obsługa gestów dotykowych
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e) => {
+    if (!touchStartX.current || !touchStartY.current) return;
+
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+
+    const deltaX = touchStartX.current - touchEndX;
+    const deltaY = touchStartY.current - touchEndY;
+
+    // Sprawdź, czy gest był bardziej poziomy niż pionowy
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      if (Math.abs(deltaX) > 50) { // Minimalna odległość przesunięcia
+        if (deltaX > 0 && currentPage < numPages) {
+          // Przesunięcie w lewo - następna strona
+          handleNextPage();
+        } else if (deltaX < 0 && currentPage > 1) {
+          // Przesunięcie w prawo - poprzednia strona
+          handlePrevPage();
+        }
+      }
+    }
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
+
+  // Obsługa przeciągania myszą
+  const handleMouseDown = (e) => {
+    isDragging.current = true;
+    startX.current = e.clientX;
+    startY.current = e.clientY;
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging.current) return;
+    
+    // Opcjonalnie: dodaj wizualny feedback podczas przeciągania
+    e.preventDefault(); // zapobiega zaznaczaniu tekstu
+  };
+
+  const handleMouseUp = (e) => {
+    if (!isDragging.current) return;
+
+    const deltaX = startX.current - e.clientX;
+    const deltaY = startY.current - e.clientY;
+
+    // Sprawdź, czy gest był bardziej poziomy niż pionowy
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      if (Math.abs(deltaX) > 50) { // Minimalna odległość przesunięcia
+        if (deltaX > 0 && currentPage < numPages) {
+          // Przesunięcie w lewo - następna strona
+          handleNextPage();
+        } else if (deltaX < 0 && currentPage > 1) {
+          // Przesunięcie w prawo - poprzednia strona
+          handlePrevPage();
+        }
+      }
+    }
+
+    isDragging.current = false;
+    startX.current = null;
+    startY.current = null;
+  };
+
+  // Obsługa wyjścia kursora poza obszar
+  const handleMouseLeave = () => {
+    isDragging.current = false;
+    startX.current = null;
+    startY.current = null;
+  };
+
   if (isLoading) return <div>Ładowanie listy utworów...</div>;
   if (error) return <div>Błąd: {error}</div>;
 
@@ -198,12 +280,19 @@ function ScoreSelector({ onViewChange }) {
       ) : (
         <div 
           ref={fullscreenRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
           style={{ 
             height: '100vh',
             width: '100vw',
             position: 'relative',
             backgroundColor: '#000',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            cursor: isDragging.current ? 'grabbing' : 'grab'
           }}
         >
           <button
@@ -218,11 +307,29 @@ function ScoreSelector({ onViewChange }) {
               color: 'white',
               border: 'none',
               borderRadius: '50%',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              opacity: 0.7,
+              transition: 'opacity 0.3s'
             }}
           >
             {isFullscreen ? '↙' : '↗'}
           </button>
+
+          <div style={{
+            position: 'fixed',
+            bottom: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            color: 'white',
+            padding: '5px 10px',
+            borderRadius: '15px',
+            fontSize: '14px',
+            opacity: 0.7,
+            transition: 'opacity 0.3s'
+          }}>
+            {currentPage} / {numPages}
+          </div>
 
           <button
             onClick={handleBackClick}
@@ -308,12 +415,19 @@ function ScoreSelector({ onViewChange }) {
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            padding: '20px',
             width: '100%',
             height: '100%',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            userSelect: 'none' // zapobiega zaznaczaniu podczas przeciągania
           }}>
-            <canvas ref={canvasRef} style={{ maxHeight: '100%' }} />
+            <canvas 
+              ref={canvasRef} 
+              style={{ 
+                maxHeight: '100%',
+                maxWidth: '100%',
+                objectFit: 'contain'
+              }} 
+            />
           </div>
         </div>
       )}
