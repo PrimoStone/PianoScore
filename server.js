@@ -1,50 +1,71 @@
 import express from 'express';
-import { readdir } from 'fs/promises';
+import cors from 'cors';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { createServer as createViteServer } from 'vite';
+import fs from 'fs';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-async function createServer() {
-  const app = express();
+const app = express();
 
-  const vite = await createViteServer({
-    server: { middlewareMode: true },
-    appType: 'spa',
-  });
+app.use(cors());
+app.use(express.json());
 
-  app.use(vite.middlewares);
+// Logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} ${req.method} ${req.url}`);
+  next();
+});
 
-  app.get('/api/scores', async (req, res) => {
-    try {
-      const scoresDir = join(__dirname, 'public', 'scores');
-      const files = await readdir(scoresDir);
-      const pdfFiles = files.filter(file => file.endsWith('.pdf'));
-      res.json(pdfFiles);
-    } catch (error) {
-      console.error('Error reading scores directory:', error);
-      res.status(500).json({ error: 'Unable to read scores directory' });
+app.get('/api/scores', async (req, res) => {
+  console.log('Próba pobrania listy plików...');
+  try {
+    // Sprawdź ścieżkę do folderu scores
+    const scoresPath = join(__dirname, 'public', 'scores');
+    console.log('Ścieżka do folderu scores:', scoresPath);
+
+    // Sprawdź czy folder istnieje
+    if (!fs.existsSync(scoresPath)) {
+      console.log('Folder scores nie istnieje!');
+      // Zwróć pustą listę zamiast błędu
+      return res.json({ files: [] });
     }
-  });
 
-  app.use('/scores', express.static(join(__dirname, 'public', 'scores')));
+    // Pobierz listę plików
+    const files = fs.readdirSync(scoresPath);
+    console.log('Znalezione pliki:', files);
 
-  app.use('*', async (req, res, next) => {
-    const url = req.originalUrl;
+    // Filtruj pliki PDF
+    const pdfFiles = files.filter(file => file.toLowerCase().endsWith('.pdf'));
+    console.log('Pliki PDF:', pdfFiles);
 
-    try {
-      let template = await vite.transformIndexHtml(url, '');
-      res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
-    } catch (e) {
-      vite.ssrFixStacktrace(e);
-      next(e);
-    }
-  });
+    return res.json({ files: pdfFiles });
+  } catch (error) {
+    console.error('Szczegóły błędu:', error);
+    // Zwróć bardziej szczegółową informację o błędzie
+    return res.status(500).json({ 
+      error: 'Nie udało się pobrać listy plików',
+      details: error.message,
+      files: []
+    });
+  }
+});
 
-  app.listen(3001, () => {
-    console.log('Server running at http://localhost:3001');
-  });
-}
+const PORT = 3002;
 
-createServer();
+app.listen(PORT, () => {
+  console.log(`Serwer nasłuchuje na porcie ${PORT}`);
+  
+  // Sprawdź folder scores przy starcie
+  const scoresPath = join(__dirname, 'public', 'scores');
+  console.log('Ścieżka do folderu scores:', scoresPath);
+  
+  if (fs.existsSync(scoresPath)) {
+    const files = fs.readdirSync(scoresPath);
+    console.log('Pliki w folderze scores:', files);
+  } else {
+    console.log('UWAGA: Folder scores nie istnieje!');
+    console.log('Utwórz folder:', scoresPath);
+  }
+});

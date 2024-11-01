@@ -1,55 +1,39 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import * as pdfjsLib from 'pdfjs-dist';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 function ScoreSelector({ onViewChange }) {
-  const [scores, setScores] = useState([]);
-  const [selectedScore, setSelectedScore] = useState('');
-  const [error, setError] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [numPages, setNumPages] = useState(null);
-  const canvasRef = useRef(null);
-  const pdfDocRef = useRef(null);
-  const [scale, setScale] = useState(1.5);
   const [isFileView, setIsFileView] = useState(true);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const fullscreenRef = useRef(null);
-  const touchStartX = useRef(null);
-  const touchStartY = useRef(null);
-  const isDragging = useRef(false);
-  const startX = useRef(null);
-  const startY = useRef(null);
-
-  const handlePrevPage = () => {
-    setCurrentPage(prev => Math.max(1, prev - 1));
-  };
-
-  const handleNextPage = () => {
-    setCurrentPage(prev => Math.min(numPages || 1, prev + 1));
-  };
+  const [files, setFiles] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [pdfDoc, setPdfDoc] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [numPages, setNumPages] = useState(0);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     const fetchScores = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch('http://localhost:3002/api/scores', {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',
-          mode: 'cors'
-        });
+        setError(null);
+        console.log('Fetching scores...');
         
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
+        const response = await fetch('/api/scores');
+        console.log('Response status:', response.status);
+        
         const data = await response.json();
-        setScores(data);
+        console.log('Received data:', data);
+
+        if (data.files) {
+          setFiles(data.files);
+        } else {
+          throw new Error('Nieprawidłowy format danych');
+        }
       } catch (err) {
-        console.error('Szczegóły błędu:', err);
-        setError(err.message);
+        console.error('Błąd pobierania plików:', err);
+        setError('Nie udało się załadować listy plików');
       } finally {
         setIsLoading(false);
       }
@@ -58,358 +42,185 @@ function ScoreSelector({ onViewChange }) {
     fetchScores();
   }, []);
 
-  const loadPDF = async (url) => {
+  useEffect(() => {
+    if (pdfDoc) {
+      renderPage();
+    }
+  }, [pdfDoc, currentPage]);
+
+  const handleFileSelect = async (file) => {
     try {
-      const loadingTask = window.pdfjsLib.getDocument(url);
-      const pdf = await loadingTask.promise;
-      pdfDocRef.current = pdf;
-      setNumPages(pdf.numPages);
-      renderPage(1);
-    } catch (err) {
-      console.error('Błąd ładowania PDF:', err);
-      setError(err.message);
+      const response = await fetch(`/api/scores/${file}`);
+      const arrayBuffer = await response.arrayBuffer();
+      const loadedPdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+      
+      setPdfDoc(loadedPdf);
+      setNumPages(loadedPdf.numPages);
+      setCurrentPage(1);
+      setIsFileView(false);
+    } catch (error) {
+      console.error('Error loading PDF:', error);
     }
   };
 
-  const calculateOptimalScale = (page) => {
-    const viewport = page.getViewport({ scale: 1.0 });
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
-    
-    const scaleHeight = (viewportHeight - 80) / viewport.height;
-    const scaleWidth = (viewportWidth - 120) / viewport.width;
-    
-    return Math.min(scaleHeight, scaleWidth);
-  };
-
-  const renderPage = async (pageNumber) => {
-    if (!pdfDocRef.current) return;
-
+  const renderPage = async () => {
     try {
-      const page = await pdfDocRef.current.getPage(pageNumber);
+      const page = await pdfDoc.getPage(currentPage);
       const canvas = canvasRef.current;
+      const viewport = page.getViewport({ scale: 1.5 });
+      const context = canvas.getContext('2d');
       
-      const optimalScale = calculateOptimalScale(page);
-      setScale(optimalScale);
-      
-      const viewport = page.getViewport({ scale: optimalScale });
-
       canvas.height = viewport.height;
       canvas.width = viewport.width;
 
       const renderContext = {
-        canvasContext: canvas.getContext('2d'),
+        canvasContext: context,
         viewport: viewport
       };
 
       await page.render(renderContext).promise;
     } catch (err) {
       console.error('Błąd renderowania strony:', err);
-      setError(err.message);
     }
   };
 
-  useEffect(() => {
-    const handleKeyPress = (e) => {
-      if (pdfDocRef.current) {
-        if (e.key === 'ArrowRight' && currentPage < numPages) {
-          setCurrentPage(prev => prev + 1);
-        } else if (e.key === 'ArrowLeft' && currentPage > 1) {
-          setCurrentPage(prev => prev - 1);
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [currentPage, numPages]);
-
-  useEffect(() => {
-    if (selectedScore) {
-      loadPDF(selectedScore);
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
     }
-  }, [selectedScore]);
-
-  useEffect(() => {
-    if (pdfDocRef.current) {
-      renderPage(currentPage);
-    }
-  }, [currentPage]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (pdfDocRef.current) {
-        renderPage(currentPage);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [currentPage]);
-
-  const handleScoreChange = (event) => {
-    const fullPath = `http://localhost:3002${event.target.value}`;
-    setSelectedScore(fullPath);
-    setCurrentPage(1);
-    setIsFileView(false);
-    onViewChange(false);
   };
 
-  const handleBackClick = () => {
+  const handleNextPage = () => {
+    if (currentPage < numPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handleBackToFiles = () => {
     setIsFileView(true);
-    onViewChange(true);
+    setPdfDoc(null);
+    setCurrentPage(1);
+    setNumPages(0);
   };
-
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      fullscreenRef.current.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
-    }
-  };
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
-
-  // Obsługa gestów dotykowych
-  const handleTouchStart = (e) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchEnd = (e) => {
-    if (!touchStartX.current || !touchStartY.current) return;
-
-    const touchEndX = e.changedTouches[0].clientX;
-    const touchEndY = e.changedTouches[0].clientY;
-
-    const deltaX = touchStartX.current - touchEndX;
-    const deltaY = touchStartY.current - touchEndY;
-
-    // Sprawdź, czy gest był bardziej poziomy niż pionowy
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-      if (Math.abs(deltaX) > 50) { // Minimalna odległość przesunięcia
-        if (deltaX > 0 && currentPage < numPages) {
-          // Przesunięcie w lewo - następna strona
-          handleNextPage();
-        } else if (deltaX < 0 && currentPage > 1) {
-          // Przesunięcie w prawo - poprzednia strona
-          handlePrevPage();
-        }
-      }
-    }
-
-    touchStartX.current = null;
-    touchStartY.current = null;
-  };
-
-  // Obsługa przeciągania myszą
-  const handleMouseDown = (e) => {
-    isDragging.current = true;
-    startX.current = e.clientX;
-    startY.current = e.clientY;
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isDragging.current) return;
-    
-    // Opcjonalnie: dodaj wizualny feedback podczas przeciągania
-    e.preventDefault(); // zapobiega zaznaczaniu tekstu
-  };
-
-  const handleMouseUp = (e) => {
-    if (!isDragging.current) return;
-
-    const deltaX = startX.current - e.clientX;
-    const deltaY = startY.current - e.clientY;
-
-    // Sprawdź, czy gest był bardziej poziomy niż pionowy
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-      if (Math.abs(deltaX) > 50) { // Minimalna odległość przesunięcia
-        if (deltaX > 0 && currentPage < numPages) {
-          // Przesunięcie w lewo - następna strona
-          handleNextPage();
-        } else if (deltaX < 0 && currentPage > 1) {
-          // Przesunięcie w prawo - poprzednia strona
-          handlePrevPage();
-        }
-      }
-    }
-
-    isDragging.current = false;
-    startX.current = null;
-    startY.current = null;
-  };
-
-  // Obsługa wyjścia kursora poza obszar
-  const handleMouseLeave = () => {
-    isDragging.current = false;
-    startX.current = null;
-    startY.current = null;
-  };
-
-  if (isLoading) return <div>Ładowanie listy utworów...</div>;
-  if (error) return <div>Błąd: {error}</div>;
 
   return (
-    <div className="score-selector" style={{ height: '100vh', margin: 0, padding: 0 }}>
+    <div>
       {isFileView ? (
         <div style={{ padding: '20px' }}>
-          <h2>Wybierz nuty:</h2>
-          <select 
-            value={selectedScore ? selectedScore.replace('http://localhost:3002', '') : ''}
-            onChange={handleScoreChange}
-            style={{ width: '100%', padding: '10px', marginTop: '10px' }}
-          >
-            <option value="">-- Wybierz utwór --</option>
-            {scores.map((score, index) => (
-              <option key={index} value={score.path}>
-                {score.name}
-              </option>
-            ))}
-          </select>
+          <h2>Wybierz nuty</h2>
+          
+          {isLoading && (
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              Ładowanie listy utworów...
+            </div>
+          )}
+
+          {error && (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '20px',
+              color: 'red' 
+            }}>
+              {error}
+            </div>
+          )}
+
+          {!isLoading && !error && (
+            <div style={{ 
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: '20px',
+              marginTop: '20px'
+            }}>
+              {files.map((file, index) => (
+                <div
+                  key={index}
+                  onClick={() => handleFileSelect(file)}
+                  style={{
+                    padding: '15px',
+                    border: '1px solid #ddd',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    backgroundColor: 'white'
+                  }}
+                >
+                  {file}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!isLoading && !error && files.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              Brak plików do wyświetlenia
+            </div>
+          )}
         </div>
       ) : (
-        <div 
-          ref={fullscreenRef}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-          style={{ 
-            height: '100vh',
-            width: '100vw',
-            position: 'relative',
-            backgroundColor: '#000',
-            overflow: 'hidden',
-            cursor: isDragging.current ? 'grabbing' : 'grab'
-          }}
-        >
-          <button
-            onClick={toggleFullscreen}
-            style={{
-              position: 'fixed',
-              top: '20px',
-              right: '20px',
-              zIndex: 1000,
-              padding: '10px',
-              backgroundColor: 'rgba(76, 175, 80, 0.7)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '50%',
-              cursor: 'pointer',
-              opacity: 0.7,
-              transition: 'opacity 0.3s'
-            }}
-          >
-            {isFullscreen ? '↙' : '↗'}
-          </button>
-
-          <div style={{
-            position: 'fixed',
-            bottom: '20px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            color: 'white',
-            padding: '5px 10px',
-            borderRadius: '15px',
-            fontSize: '14px',
-            opacity: 0.7,
-            transition: 'opacity 0.3s'
+        <div style={{ 
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'white',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <div style={{ 
+            padding: '10px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottom: '1px solid #ddd'
           }}>
-            {currentPage} / {numPages}
+            <button 
+              onClick={handleBackToFiles}
+              style={{
+                padding: '8px 16px',
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                backgroundColor: 'white',
+                cursor: 'pointer'
+              }}
+            >
+              Powrót
+            </button>
+            <div>
+              Strona {currentPage} z {numPages}
+            </div>
+            <div>
+              <button 
+                onClick={handlePrevPage} 
+                disabled={currentPage === 1}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  backgroundColor: 'white',
+                  cursor: currentPage === 1 ? 'default' : 'pointer',
+                  opacity: currentPage === 1 ? 0.5 : 1,
+                  marginRight: '10px'
+                }}
+              >
+                Poprzednia
+              </button>
+              <button 
+                onClick={handleNextPage}
+                disabled={currentPage === numPages}
+                style={{
+                  padding: '8px 16px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  backgroundColor: 'white',
+                  cursor: currentPage === numPages ? 'default' : 'pointer',
+                  opacity: currentPage === numPages ? 0.5 : 1
+                }}
+              >
+                Następna
+              </button>
+            </div>
           </div>
-
-          <button
-            onClick={handleBackClick}
-            style={{
-              position: 'fixed',
-              top: '20px',
-              left: '20px',
-              zIndex: 1000,
-              padding: '10px 20px',
-              backgroundColor: '#4CAF50',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px'
-            }}
-          >
-            <span>←</span>
-            <span>Powrót</span>
-          </button>
-
-          <button 
-            onClick={handlePrevPage}
-            disabled={currentPage <= 1}
-            style={{
-              position: 'fixed',
-              left: '20px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              zIndex: 1000,
-              padding: '15px',
-              cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
-              backgroundColor: currentPage <= 1 ? 'rgba(204, 204, 204, 0.7)' : 'rgba(76, 175, 80, 0.7)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '50%',
-              width: '50px',
-              height: '50px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '24px',
-              boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-              transition: 'background-color 0.3s'
-            }}
-          >
-            ←
-          </button>
-
-          <button 
-            onClick={handleNextPage}
-            disabled={currentPage >= (numPages || 1)}
-            style={{
-              position: 'fixed',
-              right: '20px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              zIndex: 1000,
-              padding: '15px',
-              cursor: currentPage >= (numPages || 1) ? 'not-allowed' : 'pointer',
-              backgroundColor: currentPage >= (numPages || 1) ? 'rgba(204, 204, 204, 0.7)' : 'rgba(76, 175, 80, 0.7)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '50%',
-              width: '50px',
-              height: '50px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '24px',
-              boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-              transition: 'background-color 0.3s'
-            }}
-          >
-            →
-          </button>
-
           <div style={{ 
             flex: 1,
             display: 'flex',
@@ -417,8 +228,7 @@ function ScoreSelector({ onViewChange }) {
             alignItems: 'center',
             width: '100%',
             height: '100%',
-            overflow: 'hidden',
-            userSelect: 'none' // zapobiega zaznaczaniu podczas przeciągania
+            overflow: 'hidden'
           }}>
             <canvas 
               ref={canvasRef} 
