@@ -11,6 +11,8 @@ function ScoreSelector({ onViewChange }) {
   const pdfDocRef = useRef(null);
   const [scale, setScale] = useState(1.5);
   const [isFileView, setIsFileView] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const fullscreenRef = useRef(null);
 
   const handlePrevPage = () => {
     setCurrentPage(prev => Math.max(1, prev - 1));
@@ -153,6 +155,25 @@ function ScoreSelector({ onViewChange }) {
     onViewChange(true);
   };
 
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      fullscreenRef.current.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
   if (isLoading) return <div>Ładowanie listy utworów...</div>;
   if (error) return <div>Błąd: {error}</div>;
 
@@ -175,13 +196,34 @@ function ScoreSelector({ onViewChange }) {
           </select>
         </div>
       ) : (
-        <div style={{ 
-          height: '100vh', 
-          display: 'flex', 
-          position: 'relative',
-          backgroundColor: '#f5f5f5',
-          overflow: 'hidden'
-        }}>
+        <div 
+          ref={fullscreenRef}
+          style={{ 
+            height: '100vh',
+            width: '100vw',
+            position: 'relative',
+            backgroundColor: '#000',
+            overflow: 'hidden'
+          }}
+        >
+          <button
+            onClick={toggleFullscreen}
+            style={{
+              position: 'fixed',
+              top: '20px',
+              right: '20px',
+              zIndex: 1000,
+              padding: '10px',
+              backgroundColor: 'rgba(76, 175, 80, 0.7)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '50%',
+              cursor: 'pointer'
+            }}
+          >
+            {isFullscreen ? '↙' : '↗'}
+          </button>
+
           <button
             onClick={handleBackClick}
             style={{
