@@ -5,7 +5,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   font-family: 'Roboto', sans-serif;
-  
+
 }
 
 #root {
@@ -13,4 +13,9 @@ body {
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+}
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
 }

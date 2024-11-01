@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ScoreSelector from './components/ScoreSelector';
 
 function App() {
+  const [isFileView, setIsFileView] = useState(true);
+
   return (
-    <div className="app">
-      <h1>Piano Score Viewer</h1>
-      <ScoreSelector />
+    <div className="App">
+      {isFileView && <h1>Piano Score Viewer</h1>}
+      <ScoreSelector onViewChange={setIsFileView} />
     </div>
   );
 }
