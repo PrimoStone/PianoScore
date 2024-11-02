@@ -14,6 +14,71 @@ function ScoreSelector() {
   const [error, setError] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const canvasRef = useRef(null);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+  const containerRef = useRef(null);
+
+  // Minimalna odległość dla swipe
+  const minSwipeDistance = 50;
+
+  // Obsługa klawiszy
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      if (!pdfDoc) return;
+
+      switch (event.key) {
+        case 'ArrowLeft':
+          handlePrevPage();
+          break;
+        case 'ArrowRight':
+          handleNextPage();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [currentPage, numPages]);
+
+  // Obsługa kliknięć w brzegi ekranu
+  const handleContainerClick = (event) => {
+    if (!pdfDoc) return;
+
+    const container = containerRef.current;
+    const clickX = event.clientX;
+    const containerWidth = container.offsetWidth;
+    const clickZone = containerWidth * 0.2; // 20% szerokości z każdej strony
+
+    if (clickX < clickZone) {
+      handlePrevPage();
+    } else if (clickX > containerWidth - clickZone) {
+      handleNextPage();
+    }
+  };
+
+  // Obsługa dotknięć (swipe)
+  const onTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      handleNextPage();
+    } else if (isRightSwipe) {
+      handlePrevPage();
+    }
+  };
 
   // Pobieranie listy plików
   useEffect(() => {
@@ -273,15 +338,54 @@ function ScoreSelector() {
         </div>
       </div>
 
-      <div style={{ 
-        flex: 1,
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: '20px',
-        overflow: 'auto',
-        backgroundColor: isFullscreen ? 'rgba(0,0,0,0.9)' : 'white'
-      }}>
+      <div 
+        ref={containerRef}
+        onClick={handleContainerClick}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        style={{ 
+          flex: 1,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '20px',
+          overflow: 'auto',
+          backgroundColor: isFullscreen ? 'rgba(0,0,0,0.9)' : 'white',
+          position: 'relative'
+        }}
+      >
+        {/* Wskaźniki stref kliknięcia */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '20%',
+          height: '100%',
+          cursor: 'pointer',
+          background: 'linear-gradient(to right, rgba(0,0,0,0.05), transparent)',
+          opacity: 0,
+          transition: 'opacity 0.3s',
+          ':hover': {
+            opacity: 1
+          }
+        }} />
+        
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: '20%',
+          height: '100%',
+          cursor: 'pointer',
+          background: 'linear-gradient(to left, rgba(0,0,0,0.05), transparent)',
+          opacity: 0,
+          transition: 'opacity 0.3s',
+          ':hover': {
+            opacity: 1
+          }
+        }} />
+
         <canvas 
           ref={canvasRef} 
           style={{ 
@@ -289,7 +393,8 @@ function ScoreSelector() {
             maxHeight: isFullscreen ? '95vh' : '80vh',
             height: 'auto',
             boxShadow: isFullscreen ? 'none' : '0 0 10px rgba(0,0,0,0.1)',
-            transition: 'all 0.3s ease'
+            transition: 'all 0.3s ease',
+            pointerEvents: 'none' // zapobiega konfliktom z kliknięciami
           }} 
         />
       </div>
