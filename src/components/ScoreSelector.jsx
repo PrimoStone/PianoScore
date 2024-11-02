@@ -1,8 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { getDocument } from 'pdfjs-dist';
-import { FaArrowLeft, FaArrowRight } from 'react-icons/fa';
-
-// Importuj worker bezpośrednio
+import { FaArrowLeft, FaArrowRight, FaExpand, FaCompress } from 'react-icons/fa';
 import 'pdfjs-dist/build/pdf.worker.entry';
 
 function ScoreSelector() {
@@ -14,6 +12,7 @@ function ScoreSelector() {
   const [numPages, setNumPages] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const canvasRef = useRef(null);
 
   // Pobieranie listy plików
@@ -128,55 +127,60 @@ function ScoreSelector() {
     setNumPages(0);
   };
 
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
+
+  // Zmodyfikowany widok listy plików
   if (isFileView) {
     return (
-      <div style={{ padding: '20px' }}>
-        <h2>Wybierz nuty</h2>
+      <div style={{ 
+        padding: '20px',
+        maxWidth: '600px',
+        margin: '0 auto'
+      }}>
+        <h2 style={{ 
+          textAlign: 'center',
+          marginBottom: '20px'
+        }}>
+          Wybierz nuty
+        </h2>
         
-        {isLoading && (
+        {isLoading ? (
           <div style={{ textAlign: 'center', padding: '20px' }}>
             Ładowanie listy utworów...
           </div>
-        )}
-
-        {error && (
+        ) : error ? (
           <div style={{ color: 'red', textAlign: 'center', padding: '20px' }}>
             {error}
           </div>
+        ) : (
+          <select
+            value={selectedFile || ''}
+            onChange={(e) => handleFileSelect(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px',
+              fontSize: '16px',
+              borderRadius: '8px',
+              border: '1px solid #ddd',
+              backgroundColor: 'white',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="">-- Wybierz utwór --</option>
+            {files.map((file, index) => (
+              <option key={index} value={file}>
+                {file.replace('.pdf', '')}
+              </option>
+            ))}
+          </select>
         )}
-
-        <div style={{ 
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-          gap: '20px',
-          marginTop: '20px'
-        }}>
-          {files.map((file, index) => (
-            <div
-              key={index}
-              onClick={() => handleFileSelect(file)}
-              style={{
-                padding: '15px',
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                backgroundColor: 'white',
-                transition: 'all 0.2s ease',
-                ':hover': {
-                  backgroundColor: '#f5f5f5',
-                  transform: 'translateY(-2px)',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                }
-              }}
-            >
-              {file}
-            </div>
-          ))}
-        </div>
       </div>
     );
   }
 
+  // Widok PDF z lightboxem
   return (
     <div style={{ 
       position: 'fixed',
@@ -184,16 +188,19 @@ function ScoreSelector() {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'white',
+      backgroundColor: isFullscreen ? 'rgba(0,0,0,0.9)' : 'white',
       display: 'flex',
-      flexDirection: 'column'
+      flexDirection: 'column',
+      zIndex: isFullscreen ? 1000 : 1
     }}>
       <div style={{ 
         padding: '10px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        borderBottom: '1px solid #ddd'
+        borderBottom: '1px solid #ddd',
+        backgroundColor: isFullscreen ? 'rgba(0,0,0,0.8)' : 'white',
+        color: isFullscreen ? 'white' : 'black'
       }}>
         <button 
           onClick={handleBackToFiles}
@@ -201,11 +208,15 @@ function ScoreSelector() {
             padding: '8px 16px',
             border: '1px solid #ddd',
             borderRadius: '4px',
-            backgroundColor: 'white',
-            cursor: 'pointer'
+            backgroundColor: isFullscreen ? 'transparent' : 'white',
+            color: isFullscreen ? 'white' : 'black',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px'
           }}
         >
-          <FaArrowLeft style={{ marginRight: '5px' }} />
+          <FaArrowLeft />
           Powrót
         </button>
         
@@ -213,7 +224,7 @@ function ScoreSelector() {
           {selectedFile} - Strona {currentPage} z {numPages}
         </div>
         
-        <div>
+        <div style={{ display: 'flex', gap: '10px' }}>
           <button 
             onClick={handlePrevPage}
             disabled={currentPage === 1}
@@ -221,13 +232,27 @@ function ScoreSelector() {
               padding: '8px 16px',
               border: '1px solid #ddd',
               borderRadius: '4px',
-              backgroundColor: 'white',
+              backgroundColor: isFullscreen ? 'transparent' : 'white',
+              color: isFullscreen ? 'white' : 'black',
               cursor: currentPage === 1 ? 'default' : 'pointer',
-              opacity: currentPage === 1 ? 0.5 : 1,
-              marginRight: '10px'
+              opacity: currentPage === 1 ? 0.5 : 1
             }}
           >
             <FaArrowLeft />
+          </button>
+          
+          <button 
+            onClick={toggleFullscreen}
+            style={{
+              padding: '8px 16px',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              backgroundColor: isFullscreen ? 'transparent' : 'white',
+              color: isFullscreen ? 'white' : 'black',
+              cursor: 'pointer'
+            }}
+          >
+            {isFullscreen ? <FaCompress /> : <FaExpand />}
           </button>
           
           <button 
@@ -237,7 +262,8 @@ function ScoreSelector() {
               padding: '8px 16px',
               border: '1px solid #ddd',
               borderRadius: '4px',
-              backgroundColor: 'white',
+              backgroundColor: isFullscreen ? 'transparent' : 'white',
+              color: isFullscreen ? 'white' : 'black',
               cursor: currentPage === numPages ? 'default' : 'pointer',
               opacity: currentPage === numPages ? 0.5 : 1
             }}
@@ -247,26 +273,23 @@ function ScoreSelector() {
         </div>
       </div>
 
-      {error && (
-        <div style={{ color: 'red', textAlign: 'center', padding: '20px' }}>
-          {error}
-        </div>
-      )}
-
       <div style={{ 
         flex: 1,
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         padding: '20px',
-        overflow: 'auto'
+        overflow: 'auto',
+        backgroundColor: isFullscreen ? 'rgba(0,0,0,0.9)' : 'white'
       }}>
         <canvas 
           ref={canvasRef} 
           style={{ 
             maxWidth: '100%',
+            maxHeight: isFullscreen ? '95vh' : '80vh',
             height: 'auto',
-            boxShadow: '0 0 10px rgba(0,0,0,0.1)'
+            boxShadow: isFullscreen ? 'none' : '0 0 10px rgba(0,0,0,0.1)',
+            transition: 'all 0.3s ease'
           }} 
         />
       </div>
