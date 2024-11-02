@@ -14,12 +14,8 @@ function ScoreSelector() {
   const [error, setError] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const canvasRef = useRef(null);
-  const [touchStart, setTouchStart] = useState(null);
-  const [touchEnd, setTouchEnd] = useState(null);
+  const [touchStartX, setTouchStartX] = useState(null);
   const containerRef = useRef(null);
-
-  // Minimalna odległość dla swipe
-  const minSwipeDistance = 50;
 
   // Obsługa klawiszy
   useEffect(() => {
@@ -42,12 +38,14 @@ function ScoreSelector() {
 
   // Obsługa kliknięć w brzegi ekranu
   const handleContainerClick = (event) => {
+    if (event.pointerType === 'touch') return;
+    
     if (!pdfDoc) return;
 
     const container = containerRef.current;
     const clickX = event.clientX;
     const containerWidth = container.offsetWidth;
-    const clickZone = containerWidth * 0.2; // 20% szerokości z każdej strony
+    const clickZone = containerWidth * 0.2;
 
     if (clickX < clickZone) {
       handlePrevPage();
@@ -56,28 +54,27 @@ function ScoreSelector() {
     }
   };
 
-  // Obsługa dotknięć (swipe)
-  const onTouchStart = (e) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
+  // Obsługa swipe z logowaniem
+  const handleTouchStart = (e) => {
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    setTouchStartX(x);
   };
 
-  const onTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-
-    if (isLeftSwipe) {
-      handleNextPage();
-    } else if (isRightSwipe) {
-      handlePrevPage();
+  const handleTouchEnd = (e) => {
+    if (!touchStartX) return;
+    
+    const touchEndX = e.touches ? e.changedTouches[0].clientX : e.clientX;
+    const swipeDistance = touchStartX - touchEndX;
+    
+    if (Math.abs(swipeDistance) > 50) {
+      if (swipeDistance > 0) {
+        handleNextPage();
+      } else {
+        handlePrevPage();
+      }
     }
+    
+    setTouchStartX(null);
   };
 
   // Pobieranie listy plików
@@ -130,42 +127,32 @@ function ScoreSelector() {
     }
   };
 
-  // Dodaj useEffect do renderowania strony
+  // Renderowanie PDF
   useEffect(() => {
     if (pdfDoc) {
       renderPage();
     }
   }, [pdfDoc, currentPage]);
 
-  // Zaktualizowana funkcja renderowania strony
   const renderPage = async () => {
     try {
-      console.log('Renderowanie strony:', currentPage);
       const page = await pdfDoc.getPage(currentPage);
       const canvas = canvasRef.current;
       
-      if (!canvas) {
-        console.error('Canvas nie został znaleziony');
-        return;
-      }
+      if (!canvas) return;
 
       const viewport = page.getViewport({ scale: 1.5 });
       const context = canvas.getContext('2d');
       
-      // Ustaw wymiary canvasu
       canvas.height = viewport.height;
       canvas.width = viewport.width;
-      
-      console.log('Wymiary viewport:', viewport.width, viewport.height);
 
       const renderContext = {
         canvasContext: context,
         viewport: viewport
       };
 
-      console.log('Rozpoczęcie renderowania...');
       await page.render(renderContext).promise;
-      console.log('Renderowanie zakończone');
     } catch (error) {
       console.error('Błąd renderowania strony:', error);
       setError('Nie udało się wyrenderować strony PDF');
@@ -196,208 +183,146 @@ function ScoreSelector() {
     setIsFullscreen(!isFullscreen);
   };
 
-  // Zmodyfikowany widok listy plików
-  if (isFileView) {
+  // Dodaj w komponencie
+  const NavigationHint = ({ side }) => (
+    <div style={{
+      position: 'absolute',
+      top: '50%',
+      [side]: '20px',
+      transform: 'translateY(-50%)',
+      color: 'rgba(0,0,0,0.3)',
+      fontSize: '24px',
+      opacity: 0,
+      transition: 'opacity 0.3s',
+      pointerEvents: 'none'
+    }}>
+      {side === 'left' ? <FaArrowLeft /> : <FaArrowRight />}
+    </div>
+  );
+
+  // Najprostszy możliwy handler
+  const handleTouch = () => {
+    console.log('DOTKNIĘTO EKRANU!');
+  };
+
+  // Widok PDF
+  if (!isFileView) {
     return (
       <div style={{ 
-        padding: '20px',
-        maxWidth: '600px',
-        margin: '0 auto'
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: isFullscreen ? 'rgba(0,0,0,0.9)' : 'white',
+        display: 'flex',
+        flexDirection: 'column',
+        zIndex: isFullscreen ? 1000 : 1
       }}>
-        <h2 style={{ 
-          textAlign: 'center',
-          marginBottom: '20px'
+        <div style={{ 
+          padding: '10px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderBottom: '1px solid #ddd',
+          backgroundColor: isFullscreen ? 'rgba(0,0,0,0.8)' : 'white',
+          color: isFullscreen ? 'white' : 'black'
         }}>
-          Wybierz nuty
-        </h2>
-        
-        {isLoading ? (
-          <div style={{ textAlign: 'center', padding: '20px' }}>
-            Ładowanie listy utworów...
+          <button onClick={handleBackToFiles}>
+            <FaArrowLeft /> Powrót
+          </button>
+          
+          <div>
+            {selectedFile} - Strona {currentPage} z {numPages}
           </div>
-        ) : error ? (
-          <div style={{ color: 'red', textAlign: 'center', padding: '20px' }}>
-            {error}
+          
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button onClick={handlePrevPage} disabled={currentPage === 1}>
+              <FaArrowLeft />
+            </button>
+            <button onClick={toggleFullscreen}>
+              {isFullscreen ? <FaCompress /> : <FaExpand />}
+            </button>
+            <button onClick={handleNextPage} disabled={currentPage === numPages}>
+              <FaArrowRight />
+            </button>
           </div>
-        ) : (
-          <select
-            value={selectedFile || ''}
-            onChange={(e) => handleFileSelect(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '10px',
-              fontSize: '16px',
-              borderRadius: '8px',
-              border: '1px solid #ddd',
-              backgroundColor: 'white',
-              cursor: 'pointer'
-            }}
-          >
-            <option value="">-- Wybierz utwór --</option>
-            {files.map((file, index) => (
-              <option key={index} value={file}>
-                {file.replace('.pdf', '')}
-              </option>
-            ))}
-          </select>
-        )}
+        </div>
+
+        <div 
+          ref={containerRef}
+          onMouseDown={handleTouchStart}
+          onMouseUp={handleTouchEnd}
+          style={{ 
+            flex: 1,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '20px',
+            overflow: 'auto',
+            backgroundColor: isFullscreen ? 'rgba(0,0,0,0.9)' : 'white',
+            position: 'relative'
+          }}
+        >
+          <canvas 
+            ref={canvasRef} 
+            style={{ 
+              maxWidth: '100%',
+              maxHeight: isFullscreen ? '95vh' : '80vh',
+              height: 'auto',
+              boxShadow: isFullscreen ? 'none' : '0 0 10px rgba(0,0,0,0.1)',
+              transition: 'all 0.3s ease'
+            }} 
+          />
+        </div>
       </div>
     );
   }
 
-  // Widok PDF z lightboxem
+  // Zmodyfikowany widok listy plików
   return (
     <div style={{ 
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: isFullscreen ? 'rgba(0,0,0,0.9)' : 'white',
-      display: 'flex',
-      flexDirection: 'column',
-      zIndex: isFullscreen ? 1000 : 1
+      padding: '20px',
+      maxWidth: '600px',
+      margin: '0 auto'
     }}>
-      <div style={{ 
-        padding: '10px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottom: '1px solid #ddd',
-        backgroundColor: isFullscreen ? 'rgba(0,0,0,0.8)' : 'white',
-        color: isFullscreen ? 'white' : 'black'
+      <h2 style={{ 
+        textAlign: 'center',
+        marginBottom: '20px'
       }}>
-        <button 
-          onClick={handleBackToFiles}
+        Wybierz nuty
+      </h2>
+      
+      {isLoading ? (
+        <div style={{ textAlign: 'center', padding: '20px' }}>
+          Ładowanie listy utworów...
+        </div>
+      ) : error ? (
+        <div style={{ color: 'red', textAlign: 'center', padding: '20px' }}>
+          {error}
+        </div>
+      ) : (
+        <select
+          value={selectedFile || ''}
+          onChange={(e) => handleFileSelect(e.target.value)}
           style={{
-            padding: '8px 16px',
+            width: '100%',
+            padding: '10px',
+            fontSize: '16px',
+            borderRadius: '8px',
             border: '1px solid #ddd',
-            borderRadius: '4px',
-            backgroundColor: isFullscreen ? 'transparent' : 'white',
-            color: isFullscreen ? 'white' : 'black',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '5px'
+            backgroundColor: 'white',
+            cursor: 'pointer'
           }}
         >
-          <FaArrowLeft />
-          Powrót
-        </button>
-        
-        <div>
-          {selectedFile} - Strona {currentPage} z {numPages}
-        </div>
-        
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button 
-            onClick={handlePrevPage}
-            disabled={currentPage === 1}
-            style={{
-              padding: '8px 16px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              backgroundColor: isFullscreen ? 'transparent' : 'white',
-              color: isFullscreen ? 'white' : 'black',
-              cursor: currentPage === 1 ? 'default' : 'pointer',
-              opacity: currentPage === 1 ? 0.5 : 1
-            }}
-          >
-            <FaArrowLeft />
-          </button>
-          
-          <button 
-            onClick={toggleFullscreen}
-            style={{
-              padding: '8px 16px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              backgroundColor: isFullscreen ? 'transparent' : 'white',
-              color: isFullscreen ? 'white' : 'black',
-              cursor: 'pointer'
-            }}
-          >
-            {isFullscreen ? <FaCompress /> : <FaExpand />}
-          </button>
-          
-          <button 
-            onClick={handleNextPage}
-            disabled={currentPage === numPages}
-            style={{
-              padding: '8px 16px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              backgroundColor: isFullscreen ? 'transparent' : 'white',
-              color: isFullscreen ? 'white' : 'black',
-              cursor: currentPage === numPages ? 'default' : 'pointer',
-              opacity: currentPage === numPages ? 0.5 : 1
-            }}
-          >
-            <FaArrowRight />
-          </button>
-        </div>
-      </div>
-
-      <div 
-        ref={containerRef}
-        onClick={handleContainerClick}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        style={{ 
-          flex: 1,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          padding: '20px',
-          overflow: 'auto',
-          backgroundColor: isFullscreen ? 'rgba(0,0,0,0.9)' : 'white',
-          position: 'relative'
-        }}
-      >
-        {/* Wskaźniki stref kliknięcia */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '20%',
-          height: '100%',
-          cursor: 'pointer',
-          background: 'linear-gradient(to right, rgba(0,0,0,0.05), transparent)',
-          opacity: 0,
-          transition: 'opacity 0.3s',
-          ':hover': {
-            opacity: 1
-          }
-        }} />
-        
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          width: '20%',
-          height: '100%',
-          cursor: 'pointer',
-          background: 'linear-gradient(to left, rgba(0,0,0,0.05), transparent)',
-          opacity: 0,
-          transition: 'opacity 0.3s',
-          ':hover': {
-            opacity: 1
-          }
-        }} />
-
-        <canvas 
-          ref={canvasRef} 
-          style={{ 
-            maxWidth: '100%',
-            maxHeight: isFullscreen ? '95vh' : '80vh',
-            height: 'auto',
-            boxShadow: isFullscreen ? 'none' : '0 0 10px rgba(0,0,0,0.1)',
-            transition: 'all 0.3s ease',
-            pointerEvents: 'none' // zapobiega konfliktom z kliknięciami
-          }} 
-        />
-      </div>
+          <option value="">-- Wybierz utwór --</option>
+          {files.map((file, index) => (
+            <option key={index} value={file}>
+              {file.replace('.pdf', '')}
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   );
 }
