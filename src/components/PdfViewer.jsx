@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { Document, Page } from 'react-pdf';
+import { Document, Page, pdfjs } from 'react-pdf';
 import { useSwipeable } from 'react-swipeable';
 import '../styles/PdfViewer.css';
+
+console.log('PDF.js version:', pdfjs.version);
 
 const PdfViewer = ({ file, onClose }) => {
   const [numPages, setNumPages] = useState(null);
@@ -11,7 +13,9 @@ const PdfViewer = ({ file, onClose }) => {
   const containerRef = useRef(null);
 
   useEffect(() => {
-    console.log('Próba załadowania pliku:', file);
+    setPageNumber(1);
+    setError(null);
+    setLoading(true);
   }, [file]);
 
   const onDocumentLoadSuccess = ({ numPages }) => {
@@ -22,7 +26,7 @@ const PdfViewer = ({ file, onClose }) => {
   };
 
   const onDocumentLoadError = (error) => {
-    console.error('Szczegóły błędu ładowania PDF:', error);
+    console.error('Szczegóły błędu PDF:', error);
     setError(`Nie udało się załadować pliku PDF: ${error.message}`);
     setLoading(false);
   };
@@ -33,18 +37,6 @@ const PdfViewer = ({ file, onClose }) => {
     preventDefaultTouchmoveEvent: true,
     trackMouse: true
   });
-
-  if (error) {
-    return (
-      <div className="pdf-viewer-fullscreen">
-        <div className="pdf-error">
-          <h3>Błąd ładowania PDF</h3>
-          <p>{error}</p>
-          <pre>{JSON.stringify(error, null, 2)}</pre>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="pdf-viewer-fullscreen" ref={containerRef} {...handlers}>
@@ -58,21 +50,45 @@ const PdfViewer = ({ file, onClose }) => {
           <p>Ładowanie PDF...</p>
         </div>
       )}
-      
-      <Document
-        file={file}
-        onLoadSuccess={onDocumentLoadSuccess}
-        onLoadError={onDocumentLoadError}
-      >
-        {!error && (
-          <Page 
-            pageNumber={pageNumber} 
-            renderTextLayer={false}
-            renderAnnotationLayer={false}
-            scale={1.2}
-          />
-        )}
-      </Document>
+
+      {error ? (
+        <div className="pdf-error">
+          <h3>Błąd</h3>
+          <p>{error}</p>
+          <button onClick={onClose}>Zamknij</button>
+        </div>
+      ) : (
+        <Document
+          file={file}
+          onLoadSuccess={onDocumentLoadSuccess}
+          onLoadError={onDocumentLoadError}
+          loading={
+            <div className="pdf-loading">
+              <div className="loading-spinner"></div>
+              <p>Inicjalizacja dokumentu...</p>
+            </div>
+          }
+          options={{
+            cMapUrl: 'https://unpkg.com/pdfjs-dist@2.16.105/cmaps/',
+            cMapPacked: true,
+          }}
+        >
+          {numPages > 0 && (
+            <Page 
+              key={`page_${pageNumber}`}
+              pageNumber={pageNumber} 
+              renderTextLayer={false}
+              renderAnnotationLayer={false}
+              scale={1.2}
+              loading={
+                <div className="page-loading">
+                  Ładowanie strony {pageNumber}...
+                </div>
+              }
+            />
+          )}
+        </Document>
+      )}
 
       {!error && numPages && (
         <div className="pdf-controls">

@@ -19,3 +19,32 @@ body {
   padding: 0;
   overflow: hidden;
 }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden; /* zapobiega podwójnemu scrollowaniu */
+}
+
+#root {
+  height: 100%;
+}
+
+/* Styl dla scrollbarów (opcjonalnie) */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

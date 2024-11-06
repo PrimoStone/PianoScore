@@ -9,8 +9,25 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
   overflow: hidden;
+}
+
+.react-pdf__Document {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.react-pdf__Page {
+  max-height: calc(100vh - 100px) !important;
+  width: auto !important;
+}
+
+.react-pdf__Page canvas {
+  height: auto !important;
+  max-height: calc(100vh - 100px) !important;
+  width: auto !important;
 }
 
 .pdf-loading {
@@ -38,13 +55,13 @@
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 20px;
+  z-index: 1000;
   background: rgba(0, 0, 0, 0.7);
   padding: 10px 20px;
   border-radius: 30px;
-  backdrop-filter: blur(5px);
+  display: flex;
+  gap: 20px;
+  align-items: center;
 }
 
 .nav-button {
@@ -109,6 +126,14 @@
 
 /* Responsywność */
 @media (max-width: 768px) {
+  .pdf-viewer-fullscreen {
+    padding: 10px;
+  }
+
+  .react-pdf__Document {
+    max-height: calc(100vh - 80px);
+  }
+
   .pdf-controls {
     bottom: 10px;
     padding: 8px 15px;
@@ -158,15 +183,24 @@
   text-align: center;
   max-width: 80%;
   margin: 20px auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.pdf-error pre {
-  text-align: left;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 10px;
+.pdf-error button {
+  padding: 8px 16px;
+  background: white;
+  color: #d32f2f;
+  border: none;
   border-radius: 4px;
-  overflow: auto;
-  max-height: 200px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+.pdf-error button:hover {
+  background: #f5f5f5;
 }
 
 .page-loading {
