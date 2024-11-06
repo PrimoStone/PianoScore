@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import PdfManager from './components/PdfManager';
 import { pdfjs } from 'react-pdf';
+import PdfManager from './components/PdfManager';
 
 // Ustaw dokładną wersję workera
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js`;

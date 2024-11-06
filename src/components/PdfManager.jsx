@@ -9,6 +9,15 @@ const PdfManager = () => {
   const [selectedPdf, setSelectedPdf] = useState(null);
   const folderManager = new FolderManager();
 
+  // Czyszczenie URL przy odmontowaniu komponentu
+  useEffect(() => {
+    return () => {
+      if (selectedPdf?.url) {
+        URL.revokeObjectURL(selectedPdf.url);
+      }
+    };
+  }, [selectedPdf]);
+
   const handleSelectFolder = async () => {
     try {
       const handle = await folderManager.selectDirectory();
@@ -17,29 +26,41 @@ const PdfManager = () => {
       setPdfFiles(files);
     } catch (error) {
       if (error.name !== 'AbortError') {
-        alert('Nie udało się otworzyć folderu: ' + error.message);
+        console.error('Błąd podczas wybierania folderu:', error);
       }
     }
   };
 
   const handlePdfSelect = async (pdfFile) => {
     try {
+      // Wyczyść poprzedni URL
+      if (selectedPdf?.url) {
+        URL.revokeObjectURL(selectedPdf.url);
+      }
+
       const file = await pdfFile.handle.getFile();
-      setSelectedPdf(file);
+      console.log('Załadowano plik:', file.name, 'rozmiar:', file.size);
+      
+      // Stwórz nowy URL dla pliku
+      const url = URL.createObjectURL(file);
+      console.log('Utworzono URL:', url);
+      
+      setSelectedPdf({
+        ...pdfFile,
+        url: url
+      });
     } catch (error) {
-      alert('Nie udało się otworzyć pliku PDF: ' + error.message);
+      console.error('Błąd podczas otwierania pliku:', error);
     }
   };
 
   return (
     <div className="pdf-manager">
       <div className="folder-section">
-        <button className="folder-button" onClick={handleSelectFolder}>
+        <button onClick={handleSelectFolder}>
           {folderHandle ? 'Zmień folder' : 'Wybierz folder z nutami'}
         </button>
-        {folderHandle && (
-          <h3 className="folder-name">Folder: {folderHandle.name}</h3>
-        )}
+        {folderHandle && <h3>Folder: {folderHandle.name}</h3>}
       </div>
 
       <div className="content-section">

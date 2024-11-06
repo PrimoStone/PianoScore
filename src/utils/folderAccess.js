@@ -1,34 +1,57 @@
-class FolderManager {
+export default class FolderManager {
   async selectDirectory() {
-    try {
-      const handle = await window.showDirectoryPicker({
-        mode: 'read'
-      });
+    return new Promise((resolve, reject) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.multiple = true;
+      input.webkitdirectory = true;
+      input.directory = true;
+
+      input.onchange = async (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) {
+          reject(new Error('Nie wybrano żadnych plików'));
+          return;
+        }
+
+        const handle = {
+          kind: 'directory',
+          name: files[0]?.webkitRelativePath.split('/')[0] || 'Wybrany folder',
+          values: async function* () {
+            for (const file of files) {
+              if (file.name.toLowerCase().endsWith('.pdf')) {
+                yield {
+                  kind: 'file',
+                  name: file.name,
+                  getFile: async () => file
+                };
+              }
+            }
+          }
+        };
+        resolve(handle);
+      };
+
+      input.onerror = reject;
       
-      localStorage.setItem('pdfFolderHandle', JSON.stringify({
-        name: handle.name
-      }));
-      
-      return handle;
-    } catch (error) {
-      console.error('Błąd podczas wybierania folderu:', error);
-      throw error;
-    }
+      // Dodaj input do DOM tymczasowo
+      document.body.appendChild(input);
+      input.click();
+      document.body.removeChild(input);
+    });
   }
 
   async listPdfFiles(dirHandle) {
     const files = [];
     try {
       for await (const entry of dirHandle.values()) {
-        if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.pdf')) {
+        if (entry.kind === 'file') {
           const file = await entry.getFile();
-          if (file.size <= 3 * 1024 * 1024) {
-            files.push({
-              name: entry.name,
-              handle: entry,
-              size: file.size
-            });
-          }
+          files.push({
+            name: entry.name,
+            handle: entry,
+            size: file.size
+          });
         }
       }
     } catch (error) {
@@ -36,6 +59,4 @@ class FolderManager {
     }
     return files;
   }
-}
-
-export default FolderManager; 
+} 
