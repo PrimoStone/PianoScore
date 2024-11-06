@@ -7,6 +7,7 @@ const PdfManager = () => {
   const [folderHandle, setFolderHandle] = useState(null);
   const [pdfFiles, setPdfFiles] = useState([]);
   const [selectedPdf, setSelectedPdf] = useState(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const folderManager = new FolderManager();
 
   // Czyszczenie URL przy odmontowaniu komponentu
@@ -54,6 +55,11 @@ const PdfManager = () => {
     }
   };
 
+  const handleCloseViewer = () => {
+    setIsFullscreen(false);
+    setSelectedPdf(null);
+  };
+
   return (
     <div className="pdf-manager">
       <div className="folder-section">
@@ -91,13 +97,12 @@ const PdfManager = () => {
           )}
         </div>
 
-        <div className="pdf-viewer-container">
-          {selectedPdf ? (
-            <PdfViewer file={selectedPdf} />
-          ) : (
-            <div className="no-pdf-selected">
-              Wybierz plik PDF z listy
-            </div>
+        <div className="viewer-container">
+          {selectedPdf?.url && (
+            <PdfViewer 
+              file={selectedPdf.url} 
+              onClose={handleCloseViewer}
+            />
           )}
         </div>
       </div>

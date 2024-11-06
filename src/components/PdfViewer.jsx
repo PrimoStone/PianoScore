@@ -1,12 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
+import { Document, Page } from 'react-pdf';
 import { useSwipeable } from 'react-swipeable';
 import '../styles/PdfViewer.css';
 
-console.log('PDF.js version:', pdfjs.version);
-console.log('Worker src:', pdfjs.GlobalWorkerOptions.workerSrc);
-
-const PdfViewer = ({ file }) => {
+const PdfViewer = ({ file, onClose }) => {
   const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -51,6 +48,10 @@ const PdfViewer = ({ file }) => {
 
   return (
     <div className="pdf-viewer-fullscreen" ref={containerRef} {...handlers}>
+      <button className="close-button" onClick={onClose}>
+        ✕
+      </button>
+
       {loading && (
         <div className="pdf-loading">
           <div className="loading-spinner"></div>
@@ -62,34 +63,18 @@ const PdfViewer = ({ file }) => {
         file={file}
         onLoadSuccess={onDocumentLoadSuccess}
         onLoadError={onDocumentLoadError}
-        loading={
-          <div className="pdf-loading">
-            <div className="loading-spinner"></div>
-            <p>Inicjalizacja dokumentu...</p>
-          </div>
-        }
-        options={{
-          cMapUrl: 'https://unpkg.com/pdfjs-dist@3.4.120/cmaps/',
-          cMapPacked: true,
-        }}
       >
-        {numPages > 0 && (
+        {!error && (
           <Page 
-            key={`page_${pageNumber}`}
             pageNumber={pageNumber} 
             renderTextLayer={false}
             renderAnnotationLayer={false}
             scale={1.2}
-            loading={
-              <div className="page-loading">
-                Ładowanie strony {pageNumber}...
-              </div>
-            }
           />
         )}
       </Document>
 
-      {numPages > 0 && (
+      {!error && numPages && (
         <div className="pdf-controls">
           <button 
             onClick={() => setPageNumber(prev => Math.max(prev - 1, 1))}
