@@ -1,0 +1,23 @@
+.pdf-list {
+  margin-top: 1rem;
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.pdf-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+
+.pdf-item:hover {
+  background-color: #f5f5f5;
+}
+
+.pdf-item:last-child {
+  border-bottom: none;
+} 
