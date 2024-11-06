@@ -75,7 +75,7 @@ export namespace LinkTarget {
  * @implements {IPDFLinkService}
  */
 export class PDFLinkService implements IPDFLinkService {
-    static "__#27@#isValidExplicitDestination"(dest: any): boolean;
+    static "__#26@#isValidExplicitDestination"(dest: any): boolean;
     /**
      * @param {PDFLinkServiceOptions} options
      */
@@ -112,6 +112,10 @@ export class PDFLinkService implements IPDFLinkService {
      * @type {number}
      */
     get rotation(): number;
+    /**
+     * @type {boolean}
+     */
+    get isInPresentationMode(): boolean;
     /**
      * This method will, when available, also update the browser history.
      *
@@ -151,6 +155,10 @@ export class PDFLinkService implements IPDFLinkService {
      * @param {string} action
      */
     executeNamedAction(action: string): void;
+    /**
+     * @param {Object} action
+     */
+    executeSetOCGState(action: Object): Promise<void>;
     /**
      * @param {number} pageNum - page number.
      * @param {Object} pageRef - reference to the page.
@@ -196,6 +204,10 @@ export class SimpleLinkService implements IPDFLinkService {
      */
     get rotation(): number;
     /**
+     * @type {boolean}
+     */
+    get isInPresentationMode(): boolean;
+    /**
      * @param {string|Array} dest - The named, or explicit, PDF destination.
      */
     goToDestination(dest: string | any[]): Promise<void>;
@@ -227,6 +239,10 @@ export class SimpleLinkService implements IPDFLinkService {
      * @param {string} action
      */
     executeNamedAction(action: string): void;
+    /**
+     * @param {Object} action
+     */
+    executeSetOCGState(action: Object): void;
     /**
      * @param {number} pageNum - page number.
      * @param {Object} pageRef - reference to the page.

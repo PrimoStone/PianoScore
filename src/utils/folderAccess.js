@@ -1,44 +1,59 @@
 export default class FolderManager {
   async selectDirectory() {
-    return new Promise((resolve, reject) => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.multiple = true;
-      input.webkitdirectory = true;
-      input.directory = true;
-
-      input.onchange = async (e) => {
-        const files = Array.from(e.target.files);
-        if (files.length === 0) {
-          reject(new Error('Nie wybrano żadnych plików'));
-          return;
-        }
-
-        const handle = {
-          kind: 'directory',
-          name: files[0]?.webkitRelativePath.split('/')[0] || 'Wybrany folder',
-          values: async function* () {
-            for (const file of files) {
-              if (file.name.toLowerCase().endsWith('.pdf')) {
-                yield {
-                  kind: 'file',
-                  name: file.name,
-                  getFile: async () => file
-                };
-              }
-            }
-          }
-        };
-        resolve(handle);
-      };
-
-      input.onerror = reject;
+    try {
+      // Sprawdź czy to urządzenie mobilne
+      const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
       
-      // Dodaj input do DOM tymczasowo
-      document.body.appendChild(input);
-      input.click();
-      document.body.removeChild(input);
-    });
+      if (isMobile) {
+        // Użyj input file z ograniczeniami dla urządzeń mobilnych
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = true;
+        input.accept = 'application/pdf'; // Akceptuj tylko PDF
+        
+        return new Promise((resolve, reject) => {
+          input.onchange = async (e) => {
+            try {
+              const files = Array.from(e.target.files);
+              // Sprawdź rozmiar plików
+              for (const file of files) {
+                if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                  throw new Error('Plik jest zbyt duży. Maksymalny rozmiar to 10MB.');
+                }
+              }
+              
+              const handle = {
+                kind: 'directory',
+                name: 'Wybrane pliki',
+                values: async function* () {
+                  for (const file of files) {
+                    yield {
+                      kind: 'file',
+                      name: file.name,
+                      getFile: async () => file
+                    };
+                  }
+                }
+              };
+              resolve(handle);
+            } catch (error) {
+              reject(error);
+            }
+          };
+          
+          input.onerror = reject;
+          input.click();
+        });
+      } else {
+        // Dla desktopów używaj standardowego showDirectoryPicker
+        return await window.showDirectoryPicker({
+          mode: 'read'
+        });
+      }
+    } catch (error) {
+      console.error('Błąd podczas wybierania folderu:', error);
+      throw error;
+    }
   }
 
   async listPdfFiles(dirHandle) {
@@ -46,16 +61,22 @@ export default class FolderManager {
     try {
       for await (const entry of dirHandle.values()) {
         if (entry.kind === 'file') {
-          const file = await entry.getFile();
-          files.push({
-            name: entry.name,
-            handle: entry,
-            size: file.size
-          });
+          try {
+            const file = await entry.getFile();
+            files.push({
+              name: entry.name,
+              handle: entry,
+              size: file.size
+            });
+          } catch (error) {
+            console.error('Błąd podczas pobierania pliku:', error);
+            throw error;
+          }
         }
       }
     } catch (error) {
       console.error('Błąd podczas listowania plików:', error);
+      throw error;
     }
     return files;
   }

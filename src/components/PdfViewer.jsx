@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Document, Page } from 'react-pdf';
+import { Document, Page, pdfjs } from 'react-pdf';
 import { useSwipeable } from 'react-swipeable';
 import '../styles/PdfViewer.css';
 
@@ -8,15 +8,14 @@ const PdfViewer = ({ file, onClose }) => {
   const [pageNumber, setPageNumber] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [scale, setScale] = useState(1);
   const containerRef = useRef(null);
 
   useEffect(() => {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if (isMobile) {
-      setScale(0.8);
-    }
-  }, []);
+    // Reset stanu przy zmianie pliku
+    setPageNumber(1);
+    setLoading(true);
+    setError(null);
+  }, [file]);
 
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
@@ -24,24 +23,9 @@ const PdfViewer = ({ file, onClose }) => {
     setError(null);
   };
 
-  const onDocumentLoadError = (error) => {
-    console.error('Szczegóły błędu PDF:', error);
-    setError(`Nie udało się załadować pliku PDF: ${error.message}`);
-    setLoading(false);
-  };
-
-  const handlers = useSwipeable({
-    onSwipedLeft: () => setPageNumber(prev => Math.min(prev + 1, numPages || 1)),
-    onSwipedRight: () => setPageNumber(prev => Math.max(prev - 1, 1)),
-    preventDefaultTouchmoveEvent: true,
-    trackMouse: true
-  });
-
   return (
-    <div className="pdf-viewer-fullscreen" ref={containerRef} {...handlers}>
-      <button className="close-button" onClick={onClose}>
-        ✕
-      </button>
+    <div className="pdf-viewer-fullscreen" ref={containerRef}>
+      <button className="close-button" onClick={onClose}>✕</button>
 
       {loading && (
         <div className="pdf-loading">
@@ -50,48 +34,30 @@ const PdfViewer = ({ file, onClose }) => {
         </div>
       )}
 
-      {error ? (
-        <div className="pdf-error">
-          <h3>Błąd</h3>
-          <p>{error}</p>
-          <button onClick={onClose}>Zamknij</button>
-        </div>
-      ) : (
-        <Document
-          file={file}
-          onLoadSuccess={onDocumentLoadSuccess}
-          onLoadError={onDocumentLoadError}
-          loading={
-            <div className="pdf-loading">
-              <div className="loading-spinner"></div>
-              <p>Inicjalizacja dokumentu...</p>
-            </div>
-          }
-          options={{
-            cMapUrl: 'https://unpkg.com/pdfjs-dist@2.16.105/cmaps/',
-            cMapPacked: true,
-            disableAutoFetch: true,
-            disableStream: true,
-          }}
-        >
-          {numPages > 0 && (
-            <Page 
-              key={`page_${pageNumber}`}
-              pageNumber={pageNumber} 
-              renderTextLayer={false}
-              renderAnnotationLayer={false}
-              scale={scale}
-              loading={
-                <div className="page-loading">
-                  Ładowanie strony {pageNumber}...
-                </div>
-              }
-            />
-          )}
-        </Document>
-      )}
+      <Document
+        file={file}
+        onLoadSuccess={onDocumentLoadSuccess}
+        onLoadError={(error) => {
+          console.error('PDF load error:', error);
+          setError('Nie udało się załadować pliku PDF');
+          setLoading(false);
+        }}
+        options={{
+          cMapUrl: 'https://unpkg.com/pdfjs-dist@3.4.120/cmaps/',
+          cMapPacked: true,
+          standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@3.4.120/standard_fonts/'
+        }}
+      >
+        {numPages > 0 && (
+          <Page 
+            pageNumber={pageNumber} 
+            renderTextLayer={false}
+            renderAnnotationLayer={false}
+          />
+        )}
+      </Document>
 
-      {!error && numPages && (
+      {!error && numPages > 0 && (
         <div className="pdf-controls">
           <button 
             onClick={() => setPageNumber(prev => Math.max(prev - 1, 1))}
@@ -99,9 +65,7 @@ const PdfViewer = ({ file, onClose }) => {
           >
             ←
           </button>
-          <span>
-            {pageNumber} / {numPages}
-          </span>
+          <span>{pageNumber} / {numPages}</span>
           <button 
             onClick={() => setPageNumber(prev => Math.min(prev + 1, numPages))}
             disabled={pageNumber >= numPages}
