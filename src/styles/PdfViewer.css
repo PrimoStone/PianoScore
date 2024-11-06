@@ -207,4 +207,48 @@
   color: white;
   text-align: center;
   padding: 20px;
+}
+
+/* Dodaj/zmodyfikuj style dla mobilnych urządzeń */
+@media (max-width: 768px) {
+  .pdf-viewer-fullscreen {
+    padding: 10px;
+  }
+
+  .react-pdf__Document {
+    margin: 0;
+    padding: 0;
+  }
+
+  .react-pdf__Page {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .react-pdf__Page canvas {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  .pdf-controls {
+    bottom: 10px;
+    padding: 8px;
+    gap: 10px;
+  }
+
+  .pdf-controls button {
+    padding: 8px;
+    min-width: 40px;
+  }
+}
+
+/* Optymalizacja wydajności renderowania */
+.pdf-viewer-fullscreen {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.react-pdf__Document {
+  will-change: transform;
+  transform: translateZ(0);
 } 

@@ -1,25 +1,24 @@
 import { useState, useRef, useEffect } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
+import { Document, Page } from 'react-pdf';
 import { useSwipeable } from 'react-swipeable';
 import '../styles/PdfViewer.css';
-
-console.log('PDF.js version:', pdfjs.version);
 
 const PdfViewer = ({ file, onClose }) => {
   const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [scale, setScale] = useState(1);
   const containerRef = useRef(null);
 
   useEffect(() => {
-    setPageNumber(1);
-    setError(null);
-    setLoading(true);
-  }, [file]);
+    const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (isMobile) {
+      setScale(0.8);
+    }
+  }, []);
 
   const onDocumentLoadSuccess = ({ numPages }) => {
-    console.log('PDF załadowany pomyślnie, liczba stron:', numPages);
     setNumPages(numPages);
     setLoading(false);
     setError(null);
@@ -71,6 +70,8 @@ const PdfViewer = ({ file, onClose }) => {
           options={{
             cMapUrl: 'https://unpkg.com/pdfjs-dist@2.16.105/cmaps/',
             cMapPacked: true,
+            disableAutoFetch: true,
+            disableStream: true,
           }}
         >
           {numPages > 0 && (
@@ -79,7 +80,7 @@ const PdfViewer = ({ file, onClose }) => {
               pageNumber={pageNumber} 
               renderTextLayer={false}
               renderAnnotationLayer={false}
-              scale={1.2}
+              scale={scale}
               loading={
                 <div className="page-loading">
                   Ładowanie strony {pageNumber}...
