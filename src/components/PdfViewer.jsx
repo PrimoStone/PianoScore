@@ -10,6 +10,21 @@ const PdfViewer = ({ file, onClose }) => {
   const [error, setError] = useState(null);
   const containerRef = useRef(null);
 
+  const handlers = useSwipeable({
+    onSwipedLeft: () => {
+      if (pageNumber < numPages) {
+        setPageNumber(prev => prev + 1);
+      }
+    },
+    onSwipedRight: () => {
+      if (pageNumber > 1) {
+        setPageNumber(prev => prev - 1);
+      }
+    },
+    preventDefaultTouchmoveEvent: true,
+    trackMouse: false
+  });
+
   useEffect(() => {
     // Reset stanu przy zmianie pliku
     setPageNumber(1);
@@ -24,7 +39,11 @@ const PdfViewer = ({ file, onClose }) => {
   };
 
   return (
-    <div className="pdf-viewer-fullscreen" ref={containerRef}>
+    <div 
+      className="pdf-viewer-fullscreen" 
+      ref={containerRef}
+      {...handlers}
+    >
       <button className="close-button" onClick={onClose}>✕</button>
 
       {loading && (
