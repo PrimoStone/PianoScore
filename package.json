@@ -9,11 +9,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@mediapipe/hands": "^0.4.1675469240",
+    "@tensorflow-models/handpose": "^0.1.0",
+    "@tensorflow/tfjs": "^4.22.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.1",
     "pdfjs-dist": "^3.4.120",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-pdf": "^6.2.2",
-    "react-swipeable": "^7.0.2"
+    "react-swipeable": "^7.0.2",
+    "react-webcam": "^7.2.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.0.0",

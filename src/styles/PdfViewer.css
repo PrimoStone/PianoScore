@@ -10,22 +10,18 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  z-index: 1000;
 }
 
 .react-pdf__Document {
   height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
 }
 
 .react-pdf__Page {
-  max-height: calc(100vh - 100px) !important;
-  width: auto !important;
-}
-
-.react-pdf__Page canvas {
-  height: auto !important;
   max-height: calc(100vh - 100px) !important;
   width: auto !important;
 }
@@ -37,17 +33,23 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  text-align: center;
 }
 
-.pdf-error {
-  color: #ff4444;
-  background: rgba(0, 0, 0, 0.8);
-  padding: 1rem;
-  border-radius: 4px;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .pdf-controls {
@@ -68,15 +70,11 @@
   background: transparent;
   border: 2px solid #fff;
   color: #fff;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  padding: 8px 16px;
   cursor: pointer;
-  font-size: 1.2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
+  font-size: 1rem;
+  border-radius: 4px;
+  transition: all 0.3s ease;
 }
 
 .nav-button:hover:not(:disabled) {
@@ -84,44 +82,70 @@
 }
 
 .nav-button:disabled {
-  opacity: 0.3;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-.page-info {
-  color: #fff;
-  font-size: 1rem;
-  min-width: 60px;
-  text-align: center;
-}
-
-/* Dodaj przycisk zamknięcia */
 .close-button {
   position: fixed;
   top: 20px;
   right: 20px;
+  background: transparent;
+  border: 2px solid #fff;
+  color: #fff;
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5);
-  border: 2px solid white;
-  color: white;
-  font-size: 20px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
-  z-index: 1000;
+  font-size: 1.5rem;
+  transition: all 0.3s ease;
+  z-index: 1001;
 }
 
 .close-button:hover {
-  background: rgba(0, 0, 0, 0.8);
-  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.close-button:active {
-  transform: scale(0.95);
+.gesture-toggle {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background: transparent;
+  border: 2px solid #fff;
+  color: #fff;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-radius: 20px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  z-index: 1001;
+}
+
+.gesture-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.pdf-controls button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 5px 10px;
+  transition: opacity 0.3s ease;
+}
+
+.pdf-controls button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.pdf-controls span {
+  color: white;
+  font-size: 16px;
 }
 
 /* Responsywność */
@@ -130,113 +154,53 @@
     padding: 10px;
   }
 
-  .react-pdf__Document {
-    max-height: calc(100vh - 80px);
+  .react-pdf__Page {
+    max-height: calc(100vh - 140px) !important;
   }
 
   .pdf-controls {
-    bottom: 10px;
-    padding: 8px 15px;
+    padding: 8px 16px;
   }
 
   .nav-button {
-    width: 35px;
-    height: 35px;
+    padding: 6px 12px;
+    font-size: 0.9rem;
   }
 
-  .page-info {
+  .close-button {
+    width: 36px;
+    height: 36px;
+    font-size: 1.2rem;
+  }
+
+  .gesture-toggle {
+    padding: 6px 12px;
     font-size: 0.9rem;
   }
 }
 
-/* Dodaj do istniejących stylów */
-
-.loading-spinner {
-  width: 50px;
-  height: 50px;
-  border: 5px solid #f3f3f3;
-  border-top: 5px solid #3498db;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 20px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.pdf-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: white;
-}
-
-.pdf-error {
-  background: rgba(255, 0, 0, 0.1);
-  padding: 20px;
-  border-radius: 8px;
-  color: white;
-  text-align: center;
-  max-width: 80%;
-  margin: 20px auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.pdf-error button {
-  padding: 8px 16px;
-  background: white;
-  color: #d32f2f;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  margin-top: 10px;
-}
-
-.pdf-error button:hover {
-  background: #f5f5f5;
-}
-
-.page-loading {
-  color: white;
-  text-align: center;
-  padding: 20px;
-}
-
-/* Dodaj/zmodyfikuj style dla mobilnych urządzeń */
-@media (max-width: 768px) {
-  .pdf-viewer-fullscreen {
-    padding: 10px;
-  }
-
-  .react-pdf__Document {
-    margin: 0;
-    padding: 0;
-  }
-
-  .react-pdf__Page {
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  .react-pdf__Page canvas {
-    max-width: 100% !important;
-    height: auto !important;
-  }
-
+@media (max-width: 480px) {
   .pdf-controls {
-    bottom: 10px;
     padding: 8px;
-    gap: 10px;
   }
 
-  .pdf-controls button {
+  .nav-button {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+  }
+
+  .close-button {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+
+  .gesture-toggle {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+  }
+
+  .nav-button {
     padding: 8px;
     min-width: 40px;
   }
@@ -247,8 +211,3 @@
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
-
-.react-pdf__Document {
-  will-change: transform;
-  transform: translateZ(0);
-} 
