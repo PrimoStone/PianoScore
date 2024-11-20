@@ -104,20 +104,14 @@ const PdfViewer = ({ file, onClose }) => {
       <Document
         file={file}
         onLoadSuccess={onDocumentLoadSuccess}
-        onLoadError={(error) => {
-          console.error('PDF load error:', error);
-          setError('Failed to load PDF file');
-          setLoading(false);
-        }}
-        options={{
-          cMapUrl: 'https://unpkg.com/pdfjs-dist@3.4.120/cmaps/',
-          cMapPacked: true,
-          standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@3.4.120/standard_fonts/'
-        }}
+        loading={<div className="loading-spinner"></div>}
+        className="react-pdf__Document"
       >
         {numPages > 0 && (
           <Page 
             pageNumber={pageNumber} 
+            loading={<div className="loading-spinner"></div>}
+            className="react-pdf__Page"
             renderTextLayer={false}
             renderAnnotationLayer={false}
           />
