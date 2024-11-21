@@ -8,7 +8,7 @@ const GestureRecognition = ({ onGesture, enabled }) => {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const [model, setModel] = useState(null);
-  const [showDebugView, setShowDebugView] = useState(false); // Hidden by default
+  const [showDebugView, setShowDebugView] = useState(false);
   const lastGestureTimeRef = useRef(0);
   const lastGestureRef = useRef(null);
   const detectionFrameRef = useRef(null);
@@ -180,35 +180,34 @@ const GestureRecognition = ({ onGesture, enabled }) => {
           fontSize: "12px"
         }}
       >
-        {showDebugView ? "Hide Camera Debug" : "Show Camera Debug"}
+        {showDebugView ? "Hide Debug View" : "Show Debug View"}
       </button>
       
-      {/* Always render Webcam but position it off-screen when debug view is hidden */}
       <div style={{
         position: "fixed",
-        ...(showDebugView ? {
-          top: "50px",
-          right: "10px",
-          width: "320px",
-          height: "240px",
-        } : {
-          top: 0,
-          left: "-9999px", // Move off-screen instead of hiding
-          width: "640px",
-          height: "480px",
-        }),
+        top: "10px",
+        right: "120px",
+        width: showDebugView ? "320px" : "25px",
+        height: showDebugView ? "240px" : "25px",
         zIndex: 1000,
-        backgroundColor: showDebugView ? "rgba(0,0,0,0.1)" : "transparent",
-        borderRadius: "8px",
+        backgroundColor: "rgba(0,0,0,0.1)",
+        borderRadius: showDebugView ? "8px" : "4px",
         overflow: "hidden",
+        transition: "all 0.3s ease",
         boxShadow: showDebugView ? "0 4px 6px rgba(0, 0, 0, 0.1)" : "none"
       }}>
         <Webcam
           ref={webcamRef}
           style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover"
+            width: "640px",
+            height: "480px",
+            transform: showDebugView ? "scale(0.5)" : "scale(0.04)",
+            transformOrigin: "top left",
+            transition: "transform 0.3s ease"
+          }}
+          videoConstraints={{
+            width: 640,
+            height: 480
           }}
         />
         <canvas
@@ -217,8 +216,11 @@ const GestureRecognition = ({ onGesture, enabled }) => {
             position: "absolute",
             top: 0,
             left: 0,
-            width: "100%",
-            height: "100%"
+            width: "640px",
+            height: "480px",
+            transform: showDebugView ? "scale(0.5)" : "scale(0.04)",
+            transformOrigin: "top left",
+            transition: "transform 0.3s ease"
           }}
         />
       </div>
