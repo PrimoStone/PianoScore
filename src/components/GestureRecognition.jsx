@@ -8,6 +8,7 @@ const GestureRecognition = ({ onGesture, enabled }) => {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const [model, setModel] = useState(null);
+  const [showDebugView, setShowDebugView] = useState(false); // Hidden by default
   const lastGestureTimeRef = useRef(0);
   const lastGestureRef = useRef(null);
   const detectionFrameRef = useRef(null);
@@ -160,34 +161,67 @@ const GestureRecognition = ({ onGesture, enabled }) => {
 
   return (
     <div className="gesture-recognition">
-      <Webcam
-        ref={webcamRef}
+      <button 
+        className="debug-view-toggle"
+        onClick={() => setShowDebugView(!showDebugView)}
         style={{
-          position: "absolute",
-          marginLeft: "auto",
-          marginRight: "auto",
-          left: 0,
-          right: 0,
-          textAlign: "center",
-          zIndex: 9,
-          width: 640,
-          height: 480,
+          position: "fixed",
+          top: "10px",
+          right: "10px",
+          zIndex: 1000,
+          padding: "8px 12px",
+          backgroundColor: "#007bff",
+          color: "white",
+          border: "none",
+          borderRadius: "4px",
+          cursor: "pointer",
+          opacity: 0.8,
+          transition: "opacity 0.2s",
+          fontSize: "12px"
         }}
-      />
-      <canvas
-        ref={canvasRef}
-        style={{
-          position: "absolute",
-          marginLeft: "auto",
-          marginRight: "auto",
-          left: 0,
-          right: 0,
-          textAlign: "center",
-          zIndex: 9,
-          width: 640,
-          height: 480,
-        }}
-      />
+      >
+        {showDebugView ? "Hide Camera Debug" : "Show Camera Debug"}
+      </button>
+      
+      {/* Always render Webcam but position it off-screen when debug view is hidden */}
+      <div style={{
+        position: "fixed",
+        ...(showDebugView ? {
+          top: "50px",
+          right: "10px",
+          width: "320px",
+          height: "240px",
+        } : {
+          top: 0,
+          left: "-9999px", // Move off-screen instead of hiding
+          width: "640px",
+          height: "480px",
+        }),
+        zIndex: 1000,
+        backgroundColor: showDebugView ? "rgba(0,0,0,0.1)" : "transparent",
+        borderRadius: "8px",
+        overflow: "hidden",
+        boxShadow: showDebugView ? "0 4px 6px rgba(0, 0, 0, 0.1)" : "none"
+      }}>
+        <Webcam
+          ref={webcamRef}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover"
+          }}
+        />
+        <canvas
+          ref={canvasRef}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%"
+          }}
+        />
+      </div>
     </div>
   );
 };

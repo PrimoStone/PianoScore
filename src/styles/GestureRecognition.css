@@ -16,3 +16,47 @@
   height: 100% !important;
   object-fit: cover;
 }
+
+.gesture-recognition {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.gesture-recognition canvas {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+}
+
+.debug-view-toggle {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  padding: 8px 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.debug-view-toggle:hover {
+  opacity: 1;
+  background-color: #0056b3;
+}
+
+.debug-view-toggle:active {
+  transform: translateY(1px);
+}
+
+.debug-container {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
