@@ -12,6 +12,7 @@ const GestureRecognition = ({ onGesture, enabled }) => {
   const lastGestureTimeRef = useRef(0);
   const lastGestureRef = useRef(null);
   const detectionFrameRef = useRef(null);
+  const handPresentRef = useRef(false);
   const GESTURE_COOLDOWN = 1000; // 1 second cooldown between gestures
 
   // Initialize TensorFlow and load handpose model
@@ -74,16 +75,29 @@ const GestureRecognition = ({ onGesture, enabled }) => {
       // Make detection
       const hands = await model.estimateHands(video);
       
-      if (hands.length > 0) {
-        const gesture = interpretGesture(hands[0]);
-        if (gesture) {
-          const currentTime = Date.now();
-          if (currentTime - lastGestureTimeRef.current >= GESTURE_COOLDOWN) {
-            onGesture(gesture);
-            lastGestureTimeRef.current = currentTime;
-            lastGestureRef.current = gesture;
-            console.log("Gesture detected:", gesture);
+      // Track hand presence/absence
+      const handCurrentlyPresent = hands.length > 0;
+      
+      if (handCurrentlyPresent) {
+        if (!handPresentRef.current) {
+          // Hand just appeared
+          handPresentRef.current = true;
+          const gesture = interpretGesture(hands[0]);
+          if (gesture) {
+            const currentTime = Date.now();
+            if (currentTime - lastGestureTimeRef.current >= GESTURE_COOLDOWN) {
+              console.log("Gesture detected on hand appear:", gesture);
+              onGesture(gesture);
+              lastGestureTimeRef.current = currentTime;
+              lastGestureRef.current = gesture;
+            }
           }
+        }
+      } else {
+        // Hand disappeared
+        if (handPresentRef.current) {
+          console.log("Hand disappeared");
+          handPresentRef.current = false;
         }
       }
 
